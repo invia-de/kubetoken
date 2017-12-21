@@ -2,8 +2,9 @@ package kubetoken
 
 import (
 	"fmt"
-
+	//"strings"
 	ldap "gopkg.in/ldap.v2"
+	"log"
 )
 
 // LDAPConn represents a LDAP connection that can handle search requests.
@@ -21,12 +22,25 @@ type LDAPConn interface {
 type ADRoleValidater struct {
 	Bind func() (LDAPConn, error)
 }
+/*
+func userdn(user string) string {
+      return fmt.Sprintf(binddn(user), escapeDN(user))
+}
 
-func (r *ADRoleValidater) ValidateRoleForUser(user, role string) error {
-	roledn := fmt.Sprintf("cn=%s,ou=access,ou=groups,%s", escapeDN(role), SearchBase)
-	filter := fmt.Sprintf("(&(objectCategory=Person)(sAMAccountName=*)(memberOf:1.2.840.113556.1.4.1941:=%s))", roledn)
+func binddn(user string) string {
+      if strings.HasSuffix(user, "-bot") {
+              return "CN=%s,OU=bots,OU=people," + SearchBase
+      }
+      return "CN=%s,OU=people," + SearchBase
+}
+*/
+func (r *ADRoleValidater) ValidateRoleForUser(user, role, groupSearchBaseDns, groupSearchFilter string) error {
+	roledn := fmt.Sprintf("cn=%s,%s", escapeDN(role), groupSearchBaseDns)
+	//filter := fmt.Sprintf("(&(objectCategory=Person)(sAMAccountName=*)(memberOf:1.2.840.113556.1.4.1941:=%s))", roledn)
+	filter := fmt.Sprintf(groupSearchFilter, escapeDN(user))
+
 	kubeRoles := ldap.NewSearchRequest(
-		userdn(user),
+		roledn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		filter,
 		[]string{"cn"},
@@ -40,14 +54,17 @@ func (r *ADRoleValidater) ValidateRoleForUser(user, role string) error {
 
 	sr, err := conn.Search(kubeRoles)
 	if err != nil {
+
+		log.Println(fmt.Sprintf("Role Validate failed %s", err))
 		return err
 	}
+
 	switch len(sr.Entries) {
 	case 0:
-		return fmt.Errorf("%s is not a member of %s", userdn, roledn)
+		return fmt.Errorf("%s is not a member of %s", user, roledn)
 	case 1:
 		usercn := sr.Entries[0].GetAttributeValue("cn")
-		if user != usercn {
+		if role != usercn {
 			return fmt.Errorf("%q is not a member of %q; search returned %q", user, role, usercn)
 		}
 		return nil

@@ -1,0 +1,9 @@
+Source: invia-kubetokend
+Section: misc
+Priority: optional
+Essential: no
+Maintainer: itops@invia.de
+Package: invia-kubetokend
+Version: 1alpha1
+Architecture: all
+Description: Kubetoken Server Process

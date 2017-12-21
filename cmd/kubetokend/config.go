@@ -6,7 +6,6 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"os"
-
 	"github.com/atlassian/kubetoken"
 	"github.com/pkg/errors"
 )
@@ -25,9 +24,44 @@ type Environment struct {
 	} `json:"contexts"`
 }
 
-type Config struct {
-	Environments []Environment `json:"environments"`
+//type LDAP struct {
+//	host	string		`json:"host"`
+//	port	int		`json:"port"`
+//	searchBase	string		`json:"search_base_dns"`
+//	bindDN	string	`json:"bind_dn"`
+//	bindPassword	string	`json:"bind_password"`
+//	searchFilter	string	`json:"search_filter"`
+//	groupSearchFilter		string	`json:"group_search_filter"`
+//	groupSearchBaseDns	string	`json:"group_search_base_dns"`
+//}
+
+//type Config struct {
+//	Environments []Environment `json:"environments"`
+//	LDAP `json:"ldap"`
+//}
+ type Config struct {
+
+        LDAP struct {
+				Host	string		`json:"host"`
+				Port	int		`json:"port"`
+				SearchBase	string		`json:"search_base_dns"`
+				BindDN	string	`json:"bind_dn"`
+				BindPassword	string	`json:"bind_password"`
+				SearchFilter	string	`json:"search_filter"`
+				GroupSearchFilter		string	`json:"group_search_filter"`
+				GroupSearchBaseDns	string	`json:"group_search_base_dns"`
+				SkipVerify	bool	`json:"skip_verify"`
+        } `json:"ldap"`
+		Environments []Environment `json:"environments"`
+		Kubetokend struct {
+			Listen	string	`json:"listen"`
+			Proto	string	`json:"proto"`
+			Certfile	string	`json:"certfile"`
+			Keyfile		string	`json:"keyfile"`
+			Logfile		string	`json:"logfile"`
+		} `json:"kubetokend"`
 }
+
 
 func loadConfig(p string) (*Config, error) {
 	f, err := os.Open(p)

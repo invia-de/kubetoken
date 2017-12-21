@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"crypto/tls"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -25,7 +26,7 @@ import (
 )
 
 // this value can be overwritten by -ldflags="-X main.kubetokend=$URL"
-var kubetokend = "https://kubetoken.example.com"
+//var kubetokend = "https://kubetoken.example.com"
 
 var (
 	verbose  = kingpin.Flag("verbose", "talk, damnit").Short('v').Bool()
@@ -39,13 +40,14 @@ func main() {
 		version    = kingpin.Flag("version", "print version string and exit.").Bool()
 		filter     = kingpin.Flag("filter", "only show matching roles.").Short('f').String()
 		namespace  = kingpin.Flag("namespace", "override namespace.").Short('n').String()
-		host       = kingpin.Flag("host", "kubetokend hostname.").Short('h').Default(kubetokend).String()
+		host       = kingpin.Flag("host", "kubetokend hostname.").Short('h').Default(os.Getenv("KUBETOKEN_SSO_AUTH_URL")).String()
 		pass       = kingpin.Flag("password", "password.").Short('P').Default(os.Getenv("KUBETOKEN_PW")).String()
+		certcheck	= kingpin.Flag("no-check-certificate", "Skip Certificate Verify").Short('k').Bool()
 	)
 	kingpin.Parse()
 
 	if *version {
-		compareVersionsAndExit(*host)
+		compareVersionsAndExit(*host, *certcheck)
 	}
 
 	checkKubectlOrExit()
@@ -59,7 +61,7 @@ func main() {
 
 	// fetch available roles to check the staffid password
 	// provided
-	roles, err := fetchRoles(*host, *user, *pass)
+	roles, err := fetchRoles(*host, *user, *pass, *certcheck)
 	check(err)
 
 	roles, err = filterRoles(roles, *filter)
@@ -85,7 +87,7 @@ func main() {
 
 	// send certificate to kubetoken for validation and signature
 	uri := *host + "/api/v1/signcsr"
-	result, err := submitCSR(uri, *user, *pass, csr)
+	result, err := submitCSR(uri, *user, *pass, csr, *certcheck)
 	check(err)
 
 	// because we send a CSR to kubetokend, only we know the private key.
@@ -97,7 +99,26 @@ func main() {
 	check(err)
 }
 
-func fetchRoles(host, user, pass string) ([]string, error) {
+func getTransport(certcheck bool) (*http.Transport) {
+	defaultTransport := http.DefaultTransport.(*http.Transport)
+
+// Create new Transport that ignores self-signed SSL
+	httpClientWithSelfSignedTLS := &http.Transport{
+	  Proxy:                 defaultTransport.Proxy,
+	  DialContext:           defaultTransport.DialContext,
+	  MaxIdleConns:          defaultTransport.MaxIdleConns,
+	  IdleConnTimeout:       defaultTransport.IdleConnTimeout,
+	  ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
+	  TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
+	  TLSClientConfig:       &tls.Config{InsecureSkipVerify: certcheck},
+	}
+	return httpClientWithSelfSignedTLS
+}
+func fetchRoles(host string, user string, pass string, certcheck bool) ([]string, error) {
+
+	httpClientWithSelfSignedTLS := getTransport(certcheck)
+	client := &http.Client{Transport: httpClientWithSelfSignedTLS}
+
 	// fetch available roles for user from kubetokend
 	req, err := http.NewRequest("GET", host+"/api/v1/roles", nil)
 	if err != nil {
@@ -105,7 +126,8 @@ func fetchRoles(host, user, pass string) ([]string, error) {
 	}
 
 	req.SetBasicAuth(user, pass)
-	resp, err := http.DefaultClient.Do(req)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -124,13 +146,16 @@ func fetchRoles(host, user, pass string) ([]string, error) {
 	return v.Roles, nil
 }
 
-func submitCSR(uri string, user, pass string, csr []byte) (*kubetoken.CertificateResponse, error) {
+func submitCSR(uri string, user, pass string, csr []byte, certcheck bool) (*kubetoken.CertificateResponse, error) {
+	httpClientWithSelfSignedTLS := getTransport(certcheck)
+	client := &http.Client{Transport: httpClientWithSelfSignedTLS}
+
 	req, err := http.NewRequest("POST", uri, bytes.NewReader(csr))
 	if err != nil {
 		return nil, err
 	}
 	req.SetBasicAuth(user, pass)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +171,7 @@ func submitCSR(uri string, user, pass string, csr []byte) (*kubetoken.Certificat
 		}
 		uri = fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, resp.Header.Get("Location"))
 		fmt.Println("Awaiting DUO Auth.")
-		return submitCSR(uri, user, pass, csr)
+		return submitCSR(uri, user, pass, csr, certcheck)
 	default:
 		body, _ := ioutil.ReadAll(resp.Body)
 		return nil, errors.Errorf("expected 200, got %v\n%s", resp.Status, body)
@@ -240,7 +265,8 @@ func processCertificateResponse(kubeconfig string, result *kubetoken.Certificate
 		}
 
 		for name, a := range ctx.Clusters {
-			cluster := hostnameFromURL(a)
+			//cluster := hostnameFromURL(a)
+			cluster := name
 			if err := run("kubectl",
 				"--kubeconfig", kubeconfig,
 				"config",
@@ -283,9 +309,11 @@ func processCertificateResponse(kubeconfig string, result *kubetoken.Certificate
 	return nil
 }
 
-func compareVersionsAndExit(host string) {
+func compareVersionsAndExit(host string, certcheck bool) {
 	versionURL := host + "/version"
-	resp, err := http.Get(versionURL)
+	httpClientWithSelfSignedTLS := getTransport(certcheck)
+	client := &http.Client{Transport: httpClientWithSelfSignedTLS}
+	resp, err := client.Get(versionURL)
 	check(err)
 	if resp.StatusCode != 200 {
 		fatalf("unexpected status code fetching %s: %v", versionURL, resp.Status)

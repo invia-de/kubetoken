@@ -1,0 +1,9 @@
+Package: invia-kubetoken
+Version: 1alpha1
+Section: custom
+Priority: optional
+Architecture: all
+Essential: no
+Installed-Size: 1024
+Maintainer: itops@invia.de
+Description: Kubetoken Client

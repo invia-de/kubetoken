@@ -1,0 +1,36 @@
+{
+	"ldap": {
+		"host":"ldaphost",
+		"port":636,
+		"search_base_dns":"dc=example,dc=lan",
+		"bind_dn":"uid=serviceaccount,ou=bots,dc=example,dc=lan",
+		"bind_password":"secret",
+		"search_filter":"(uid=%s)",
+		"group_search_filter":"(&(cn=kube-*)(objectClass=posixGroup)(memberUid=%s))",
+		"group_search_base_dns":"ou=groups,dc=example,dc=lan",
+		"skip_verify":false
+ 	},
+	"kubetokend": {
+		"listen":"0.0.0.0:443",
+		"proto" : "https",
+		"certfile" : "/etc/kubetoken/ssl/wildcard.pem",
+		"keyfile" : "/etc/kubetoken/ssl/wildcard.key",
+		"logfile" : "/var/log/kubetokend.log"
+	},
+    "environments": [
+	      {
+	         "customer": "examplecustomer",
+	         "env": "dev",
+	         "contexts": [
+	            {
+	               "clusters": {
+	                  "dev-cluster": "https://mycluster.example.com",
+		          "rbac-minikube": "https://192.168.99.100:8443"
+	               },
+	               "cacert": "/etc/kubetoken/ssl/devca.pem",
+	               "privkey": "/etc/kubetoken/ssl/devca-key.pem"
+	            }
+	         ]
+	      }
+    ]
+}

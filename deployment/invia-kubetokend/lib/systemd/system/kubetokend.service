@@ -1,0 +1,11 @@
+[Unit]
+Description=Kubetokend Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/kubetokend --config /etc/kubetoken/kubetoken.json
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

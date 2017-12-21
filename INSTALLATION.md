@@ -6,31 +6,11 @@ This page describes the steps necessary to customise kubetoken for your environm
 
 To avoid the necessity for a configuration file to be distributed alongside kubetoken, the default value of the variables for 
 
-- LDAP search base
-- kubetoken host
+- version string
+
 
 are set to dummy values in the source.
-When building `kubetoken` and `kubetokend` you _must_ use the `-X` linker flag to overwrite those values with site specific values.
-
-**You cannot skip this step**
-
-By default kubetoken compiles against dummy example.com domain names, you cannot build kubetoken without applying linker variables specific for your environment.
-
-### Set the kubetokend host address
-
-To set the kubetokend host address when building `cmd/kubetoken`, set the address using the linker flag
-```
--X main.kubetokend=https://kubetoken.yourcluster.yourcompany.com
-```
-
-### Set the LDAP search base
-
-To set the LDAP search base when building `cmd/kubetoken` _and_ `cmd/kubetokend`, set the address using the linker flag
-```
--X github.com/atlassian/kubetoken.SearchBase=DC=yourcompany,DC=com
-```
-
-You _must_ set the LDAP search base for both`cmd/kubetoken` _and_ `cmd/kubetokend`.
+When building `kubetoken` and `kubetokend` you may use the `-X` linker flag to overwrite those values with site specific values.
 
 ## DUO two factor authentication
 
@@ -44,7 +24,9 @@ All three values can be retrieved from the admin console by someone with Duo adm
 
 ## kubetoken cli
 
-Once built, `kubetoken` can be distributed to your users as a single binary.
+Once built, `kubetoken` can be distributed to your users as a single binary or with the Debian Package. 
+It will use Environment Variables for $USER, $KUBETOKEN_SSO_AUTH_URL, $KUBETOKEN_PW.
+The Credentials/Contexts of the Configuration in $HOME/.kube/config will be updated. 
 
 ## kubetokend deployment
 
@@ -55,4 +37,37 @@ If you are planning on deploying kubetoken inside kubernetes you will need to do
    ```
    kubectl create secret generic -n $NAMESPACE $NAME --from-file=ca.pem --from-file=ca-key.pem
    ```
-   
+## kubetokend deployment with Build Debian Package
+ * Run 
+
+```
+dpkg -i pkg.deb
+```
+
+ * All configuration goes in /etc/kubetoken/kubetoken.json. 
+ * A sample Configuration with lies [here](config/kubetoken.json.dist). You can configure all the static linked Variables from the original Kubetoken Github Project from Atlassian. 
+ * We added those:
+
+```
+	"ldap": {
+		"host":"ldaphost",
+		"port":636,
+		"search_base_dns":"dc=example,dc=lan",
+		"bind_dn":"uid=serviceaccount,ou=Services,dc=example,dc=lan",
+		"bind_password":"secret",
+		"search_filter":"(uid=%s)",
+		"group_search_filter":"(&(cn=kube-*)(objectClass=posixGroup)(memberUid=%s))",
+		"group_search_base_dns":"ou=groups,dc=example,dc=lan",
+		"skip_verify":false
+ 	},
+	"kubetokend": {
+		"listen":"0.0.0.0:443",
+		"proto" : "https",
+		"certfile" : "/etc/kubetoken/ssl/wildcard.pem",
+		"keyfile" : "/etc/kubetoken/ssl/wildcard.key",
+		"logfile" : "/var/log/kubetokend.log"
+	},
+
+```
+
+ * Start the Service with systemctl start kubetokend.service

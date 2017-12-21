@@ -3,7 +3,7 @@ package kubetoken
 import (
 	"bytes"
 	"fmt"
-	"strings"
+	"log"
 
 	ldap "gopkg.in/ldap.v2"
 )
@@ -14,32 +14,27 @@ type ADRoleProvider struct {
 	LDAPCreds
 }
 
-func userdn(user string) string {
-	return fmt.Sprintf(binddn(user), escapeDN(user))
+func (r *ADRoleProvider) FetchRolesForUser(user, groupSearchBaseDns, groupSearchFilter string) ([]string, error) {
+	return fetchRolesForUser(&r.LDAPCreds, user, groupSearchBaseDns, groupSearchFilter)
 }
 
-func binddn(user string) string {
-	if strings.HasSuffix(user, "-bot") {
-		return "CN=%s,OU=bots,OU=people," + SearchBase
-	}
-	return "CN=%s,OU=people," + SearchBase
-}
-
-func (r *ADRoleProvider) FetchRolesForUser(user string) ([]string, error) {
-	return fetchRolesForUser(&r.LDAPCreds, userdn(user))
-}
-
-func fetchRolesForUser(creds *LDAPCreds, userdn string) ([]string, error) {
+func fetchRolesForUser(creds *LDAPCreds, user string, groupSearchBaseDns string, groupSearchFilter string ) ([]string, error) {
 	conn, err := creds.Bind()
 	if err != nil {
+		log.Println("failed Bind")
 		return nil, err
 	}
 	defer conn.Close()
 
+
 	// find all the kube- roles
-	filter := fmt.Sprintf("(&(cn=kube-*-*-*-dl-*)(member:1.2.840.113556.1.4.1941:=%s))", userdn)
+//	filter := fmt.Sprintf("(&(cn=kube-*-*-*-dl-*)(member:1.2.840.113556.1.4.1941:=%s))", userdn)
+	filter := fmt.Sprintf(groupSearchFilter, user)
+
+	//log.Println(groupSearchBaseDns)
+
 	kubeRoles := ldap.NewSearchRequest(
-		"OU=access,OU=groups,"+SearchBase,
+		groupSearchBaseDns,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		filter,
 		[]string{"cn"},
@@ -47,6 +42,7 @@ func fetchRolesForUser(creds *LDAPCreds, userdn string) ([]string, error) {
 	)
 	sr, err := conn.Search(kubeRoles)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -55,6 +51,7 @@ func fetchRolesForUser(creds *LDAPCreds, userdn string) ([]string, error) {
 		role := e.GetAttributeValue("cn")
 		roles = append(roles, role)
 	}
+//	log.Println(roles)
 	return roles, nil
 }
 

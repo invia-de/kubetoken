@@ -1,0 +1,22 @@
+FROM golang:latest as builder
+RUN mkdir -p /go/src/github.com/atlassian/kubetoken
+COPY . /go/src/github.com/atlassian/kubetoken/.
+WORKDIR /go/src/github.com/atlassian/kubetoken
+RUN go get ./...
+ARG KUBETOKEND_HOST=https://kube-signin.example.com
+RUN go build -x
+RUN go build -x -ldflags="-X github.com/atlassian/kubetoken.Version=1alpha1" ./cmd/kubetokend
+RUN go build -x -ldflags="-X github.com/atlassian/kubetoken.Version=1alpha1" ./cmd/kubetoken
+
+FROM debian:jessie as debianbuilder
+RUN apt-get update && apt-get -y install mc vim devscripts dpkg-dev
+RUN mkdir -p /go/src/github.com/atlassian/kubetoken
+COPY . /go/src/github.com/atlassian/kubetoken/.
+WORKDIR /go/src/github.com/atlassian/kubetoken/deployment/
+COPY --from=builder /go/src/github.com/atlassian/kubetoken/kubetokend /go/src/github.com/atlassian/kubetoken/deployment/invia-kubetokend/usr/bin/
+COPY --from=builder /go/src/github.com/atlassian/kubetoken/kubetoken /go/src/github.com/atlassian/kubetoken/deployment/invia-kubetoken/usr/bin/
+COPY --from=builder /go/src/github.com/atlassian/kubetoken/config/kubetoken.json.dist /go/src/github.com/atlassian/kubetoken/deployment/invia-kubetokend/etc/kubetoken/kubetoken.json
+COPY --from=builder /go/src/github.com/atlassian/kubetoken/internal/cert/_testdata/ssl /go/src/github.com/atlassian/kubetoken/deployment/invia-kubetokend/etc/kubetoken/ssl
+RUN dpkg -b invia-kubetokend/ invia-kubetokend_1alpha1_all.deb
+RUN dpkg -b invia-kubetoken/ invia-kubetoken_1alpha1_all.deb
+ENTRYPOINT /bin/bash
