@@ -43,10 +43,34 @@ If you are planning on deploying kubetoken inside kubernetes you will need to do
 ```
 dpkg -i pkg.deb
 ```
-
+## kubetokend Configuration
  * All configuration goes in /etc/kubetoken/kubetoken.json. 
  * A sample Configuration with lies [here](config/kubetoken.json.dist). You can configure all the static linked Variables from the original Kubetoken Github Project from Atlassian. 
- * We added those:
+ * The Rolebindings are splitted with the kubetoken.json. Kubetokend splits the LDAP Group of the User(group\_search\_filter) on the "-", for example: kube-mycluster-defaultnamespace-userrole
+   * kube as identifier
+   * mycluster in kubetokend config for the api and ca certificates
+   * defaultnamespace as the default namespace, when not using -n
+   * userrole as the "Environment" in kubetokend config (jenkins/dev/admin)
+ * this Rolename is written to the Client Certificate as CN Group and then matched with the Kubernetes Rolebinding, for example:
+```
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+
+metadata:
+  name: myrolebinding
+  namespace: mynamespace
+
+subjects:
+  - name: kube-mycluster-defaultnamespace-userrole
+    kind: Group
+    apiGroup: "rbac.authorization.k8s.io"
+
+roleRef:
+  kind: Role
+  name: myroleinnamespace
+  apiGroup: "rbac.authorization.k8s.io"
+```
+ * We also have those General Configuration Variables:
 
 ```
 	"ldap": {
