@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,7 +15,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
-	"crypto/tls"
+	"strings"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
@@ -42,14 +43,13 @@ func main() {
 		namespace  = kingpin.Flag("namespace", "override namespace.").Short('n').String()
 		host       = kingpin.Flag("host", "kubetokend hostname.").Short('h').Default(os.Getenv("KUBETOKEN_SSO_AUTH_URL")).String()
 		pass       = kingpin.Flag("password", "password.").Short('P').Default(os.Getenv("KUBETOKEN_PW")).String()
-		certcheck	= kingpin.Flag("no-check-certificate", "Skip Certificate Verify").Short('k').Bool()
+		certcheck  = kingpin.Flag("no-check-certificate", "Skip Certificate Verify").Short('k').Envar("KUBETOKEN_NO_CHECK_CERTIFICATE").Bool()
 	)
 	kingpin.Parse()
 
 	if *version {
 		compareVersionsAndExit(*host, *certcheck)
 	}
-
 	checkKubectlOrExit()
 
 	if *pass == "" {
@@ -99,18 +99,18 @@ func main() {
 	check(err)
 }
 
-func getTransport(certcheck bool) (*http.Transport) {
+func getTransport(certcheck bool) *http.Transport {
 	defaultTransport := http.DefaultTransport.(*http.Transport)
 
-// Create new Transport that ignores self-signed SSL
+	// Create new Transport that ignores self-signed SSL
 	httpClientWithSelfSignedTLS := &http.Transport{
-	  Proxy:                 defaultTransport.Proxy,
-	  DialContext:           defaultTransport.DialContext,
-	  MaxIdleConns:          defaultTransport.MaxIdleConns,
-	  IdleConnTimeout:       defaultTransport.IdleConnTimeout,
-	  ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
-	  TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
-	  TLSClientConfig:       &tls.Config{InsecureSkipVerify: certcheck},
+		Proxy:                 defaultTransport.Proxy,
+		DialContext:           defaultTransport.DialContext,
+		MaxIdleConns:          defaultTransport.MaxIdleConns,
+		IdleConnTimeout:       defaultTransport.IdleConnTimeout,
+		ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
+		TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: certcheck},
 	}
 	return httpClientWithSelfSignedTLS
 }
@@ -188,10 +188,24 @@ func decodeResponseBody(r io.Reader) (*kubetoken.CertificateResponse, error) {
 	return &result, err
 }
 
+func reverse(s string) string {
+	rs := []rune(s)
+	for i, j := 0, len(rs)-1; i < j; i, j = i+1, j-1 {
+		rs[i], rs[j] = rs[j], rs[i]
+	}
+	return string(rs)
+}
 func chooseRole(roles []string) (string, error) {
 	fmt.Println("Available roles to choose from")
 	for i, r := range roles {
-		fmt.Printf("\t%d. %s\n", i+1, r)
+		s := strings.Split(r, "-")
+		c, namespace, role := s[1], s[2], s[3]
+		clus := strings.SplitN(c, "_", 2)
+		//company := clus[0]
+		cluster := strings.Replace(reverse(strings.Replace(reverse(clus[1]), "_", ".", 2)), "_", "-", -1)
+		//cluster := strings.Replace(clus[1], "_", ".", -1)
+
+		fmt.Printf("\t%d. Cluster: %-25s Namespace: %-20s Role: %s\n", i+1, cluster, namespace, role)
 	}
 	fmt.Print("\nEnter number of role you want: ")
 
