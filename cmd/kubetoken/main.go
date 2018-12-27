@@ -36,14 +36,14 @@ var (
 
 func main() {
 	var (
-		user       = kingpin.Flag("user", "StaffID username.").Short('u').Default(os.Getenv("USER")).String()
-		kubeconfig = kingpin.Flag("kubeconfig", "kubeconfig location.").Default(filepath.Join(os.Getenv("HOME"), ".kube", "config")).String()
+		user       = kingpin.Flag("user", "StaffID username. Default: $USER").Short('u').Default(os.Getenv("USER")).String()
+		kubeconfig = kingpin.Flag("kubeconfig", "kubeconfig location. Default: $HOME/.kube/config").Default(filepath.Join(os.Getenv("HOME"), ".kube", "config")).String()
 		version    = kingpin.Flag("version", "print version string and exit.").Bool()
 		filter     = kingpin.Flag("filter", "only show matching roles.").Short('f').String()
 		namespace  = kingpin.Flag("namespace", "override namespace.").Short('n').String()
-		host       = kingpin.Flag("host", "kubetokend hostname.").Short('h').Default(os.Getenv("KUBETOKEN_SSO_AUTH_URL")).String()
-		pass       = kingpin.Flag("password", "password.").Short('P').Default(os.Getenv("KUBETOKEN_PW")).String()
-		certcheck  = kingpin.Flag("no-check-certificate", "Skip Certificate Verify").Short('k').Envar("KUBETOKEN_NO_CHECK_CERTIFICATE").Bool()
+		host       = kingpin.Flag("host", "kubetokend hostname. Default: $KUBETOKEN_SSO_AUTH_URL").Short('h').Default(os.Getenv("KUBETOKEN_SSO_AUTH_URL")).String()
+		pass       = kingpin.Flag("password", "password. Default: KUBETOKEN_PW").Short('P').Default(os.Getenv("KUBETOKEN_PW")).String()
+		certcheck  = kingpin.Flag("no-check-certificate", "Skip Certificate Verify Default: KUBETOKEN_NO_CHECK_CERTIFICATE").Short('k').Envar("KUBETOKEN_NO_CHECK_CERTIFICATE").Bool()
 	)
 	kingpin.Parse()
 
