@@ -197,16 +197,28 @@ func reverse(s string) string {
 }
 func chooseRole(roles []string) (string, error) {
 	fmt.Println("Available roles to choose from")
+
 	for i, r := range roles {
-		s := strings.Split(r, "-")
+		splitter := "-"
+		clustersplitter := "_"
+		if strings.HasPrefix(r, "k8s") {
+			splitter = "_"
+			clustersplitter = "-"
+		}
+		s := strings.Split(r, splitter)
 		c, namespace, role := s[1], s[2], s[3]
-		clus := strings.SplitN(c, "_", 2)
+		clus := strings.SplitN(c, clustersplitter, 2)
 		//company := clus[0]
-		cluster := strings.Replace(reverse(strings.Replace(reverse(clus[1]), "_", ".", 2)), "_", "-", -1)
+		cluster := strings.Replace(reverse(strings.Replace(reverse(clus[1]), clustersplitter, ".", 2)), clustersplitter, "-", -1)
 		//cluster := strings.Replace(clus[1], "_", ".", -1)
 
 		fmt.Printf("\t%d. Cluster: %-25s Namespace: %-20s Role: %s\n", i+1, cluster, namespace, role)
 	}
+	/*
+		for i, r := range roles {
+			fmt.Printf("\t%d. Role: %s\n", i+1, r)
+		}
+	*/
 	fmt.Print("\nEnter number of role you want: ")
 
 	var n int

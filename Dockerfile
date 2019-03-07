@@ -5,8 +5,8 @@ WORKDIR /go/src/github.com/atlassian/kubetoken
 RUN go get ./...
 ARG KUBETOKEND_HOST=https://kube-signin.example.com
 RUN go build -x
-RUN go build -x -ldflags="-X github.com/atlassian/kubetoken.Version=1alpha1" ./cmd/kubetokend
-RUN go build -x -ldflags="-X github.com/atlassian/kubetoken.Version=1alpha1" ./cmd/kubetoken
+RUN go build -x -ldflags="-X github.com/atlassian/kubetoken.Version=1.0.0" ./cmd/kubetokend
+RUN go build -x -ldflags="-X github.com/atlassian/kubetoken.Version=1.0.0" ./cmd/kubetoken
 
 
 FROM ubuntu:16.04
@@ -21,4 +21,4 @@ RUN chmod +x ./kubectl
 RUN sudo mv ./kubectl /usr/local/bin/kubectl
 ENV PORT=8080
 EXPOSE $PORT
-ENTRYPOINT /bin/kubetokend --config=/go/src/github.com/atlassian/kubetoken/config/kubetoken.json
+CMD /bin/kubetokend --config=/go/src/github.com/atlassian/kubetoken/config/kubetoken.json

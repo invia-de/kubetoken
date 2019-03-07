@@ -4,8 +4,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"crypto/x509"
-    "crypto/tls"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -17,11 +17,12 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strings"
 	//"strings"
 
 	"github.com/atlassian/kubetoken"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
-    ldap "gopkg.in/ldap.v2"
+	ldap "gopkg.in/ldap.v2"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -31,8 +32,6 @@ import (
 //var BindDN = "OU=people,DC=office,DC=atlassian,DC=com"
 
 func main() {
-
-
 
 	fmt.Println(os.Args[0], "version:", kubetoken.Version)
 
@@ -53,7 +52,7 @@ func main() {
 	if config.Kubetokend.Logfile != "" {
 		f, err = os.OpenFile(config.Kubetokend.Logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
-				log.Fatal(err)
+			log.Fatal(err)
 		}
 		defer f.Close()
 		log.SetOutput(f)
@@ -63,10 +62,9 @@ func main() {
 	b, err := json.MarshalIndent(config, "", "  ")
 	check(err)
 	log.Println(fmt.Sprintf("%s\n", b))
-//@TODO Errors if Parameter not in Config
-//	ldapHost := config.LDAP.host
-//	searchBase := config.LDAP.searchBase
-
+	//@TODO Errors if Parameter not in Config
+	//	ldapHost := config.LDAP.host
+	//	searchBase := config.LDAP.searchBase
 
 	if err := loadCertificates(config); err != nil {
 		log.Fatalf("could not load certificates: %v", err)
@@ -74,7 +72,7 @@ func main() {
 
 	r := mux.NewRouter()
 	signer := http.Handler(&CertificateSigner{
-		Config:     config,
+		Config: config,
 	})
 
 	// If Duo is enabled, redirect signcsr to a duo authenticated version
@@ -91,7 +89,7 @@ func main() {
 		r.Handle("/api/v1/signcsr", BasicAuth(signer))
 	}
 	r.Handle("/api/v1/roles", BasicAuth(&RoleHandler{
-				Config:     config,
+		Config: config,
 	}))
 	r.HandleFunc("/healthcheck", func(w http.ResponseWriter, req *http.Request) {
 		io.WriteString(w, "OK")
@@ -111,11 +109,11 @@ func main() {
 		_, err := os.Stat(config.Kubetokend.Keyfile)
 		_, err2 := os.Stat(config.Kubetokend.Certfile)
 		if !os.IsNotExist(err) && !os.IsNotExist(err2) {
-				log.Fatal(http.ListenAndServeTLS(addr, config.Kubetokend.Certfile,config.Kubetokend.Keyfile, loggedRouter))
+			log.Fatal(http.ListenAndServeTLS(addr, config.Kubetokend.Certfile, config.Kubetokend.Keyfile, loggedRouter))
 		} else {
 			log.Fatal("No Certificates for Serving found")
 		}
-	} else  {
+	} else {
 		http.ListenAndServe(addr, loggedRouter)
 	}
 }
@@ -125,56 +123,56 @@ type CertificateSigner struct {
 	*Config
 }
 
-func userdn(ldapHost string, ldapPort int, ldapBind string, ldapPass string, searchBase string,searchFilter string, user string, skipVerify bool) string {
+func userdn(ldapHost string, ldapPort int, ldapBind string, ldapPass string, searchBase string, searchFilter string, user string, skipVerify bool) string {
 	//return fmt.Sprintf(binddn(ldapHost, ldapBind, ldapPass, SearchBase, user), escapeDN(user))
 	return binddn(ldapHost, ldapPort, ldapBind, ldapPass, searchBase, searchFilter, user, skipVerify)
 	//return fmt.Sprintf(binddn(user, searchBase), escapeDN(user))
 }
 
 func getuserbinddn(user, searchBase string) string {
-	return fmt.Sprintf("uid=%s," + searchBase,escapeDN(user))
+	return fmt.Sprintf("uid=%s,ou=Users,"+searchBase, escapeDN(user))
 }
 
 func binddn(ldapHost string, ldapPort int, ldapBind string, ldapPassword string, searchBase string, searchFilter string, user string, skipVerify bool) string {
-        config := tls.Config{
-                ServerName: ldapHost,
+	config := tls.Config{
+		ServerName:         ldapHost,
 		InsecureSkipVerify: skipVerify,
-        }
+	}
 
-        conn, err := ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ldapHost, ldapPort), &config)
-        if err != nil {
-		  log.Println(err)
-                  return "failed"
-        }
-        err = conn.Bind(ldapBind, ldapPassword)
-        if err != nil {
-				  log.Println(fmt.Sprintf("Fehler bei User %s: %s",user,err))
-                  return "failed"
-        }
-        defer conn.Close()
-		log.Println(fmt.Sprintf("%s logged in", user))
-        filter := fmt.Sprintf(searchFilter, user)
+	conn, err := ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ldapHost, ldapPort), &config)
+	if err != nil {
+		log.Println(err)
+		return "failed"
+	}
+	err = conn.Bind(ldapBind, ldapPassword)
+	if err != nil {
+		log.Println(fmt.Sprintf("Fehler bei User %s: %s", user, err))
+		return "failed"
+	}
+	defer conn.Close()
+	log.Println(fmt.Sprintf("%s logged in", user))
+	filter := fmt.Sprintf(searchFilter, user)
 
-        userRequest := ldap.NewSearchRequest(
-                searchBase,
-                ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-                filter,
-                []string{"dn"},
-                nil,
-        )
-        sr, err := conn.Search(userRequest)
-        if err != nil {
-                log.Println("failed search")
-                return "failed"
-        }
+	userRequest := ldap.NewSearchRequest(
+		searchBase,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		filter,
+		[]string{"dn"},
+		nil,
+	)
+	sr, err := conn.Search(userRequest)
+	if err != nil {
+		log.Println("failed search")
+		return "failed"
+	}
 
-        bindDN := ""
+	bindDN := ""
 
-        if len(sr.Entries) > 0 {
-                bindDN = sr.Entries[0].DN
-        }
+	if len(sr.Entries) > 0 {
+		bindDN = sr.Entries[0].DN
+	}
 
-        return bindDN
+	return bindDN
 }
 
 func BasicAuth(next http.Handler) http.Handler {
@@ -210,15 +208,15 @@ func (s *CertificateSigner) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	role := csr.Subject.Organization[0]
 
 	dn := userdn(
-		  s.Config.LDAP.Host,
-		  s.Config.LDAP.Port,
-		  getuserbinddn(user, s.Config.LDAP.SearchBase),
-		  pass,
-		  s.Config.LDAP.SearchBase,
-		  s.Config.LDAP.SearchFilter,
-		  user,
-		  s.Config.LDAP.SkipVerify,
-    )
+		s.Config.LDAP.Host,
+		s.Config.LDAP.Port,
+		getuserbinddn(user, s.Config.LDAP.SearchBase),
+		pass,
+		s.Config.LDAP.SearchBase,
+		s.Config.LDAP.SearchFilter,
+		user,
+		s.Config.LDAP.SkipVerify,
+	)
 	if dn != getuserbinddn(user, s.Config.LDAP.SearchBase) {
 		http.Error(w, "Forbidden", 403)
 		return
@@ -227,10 +225,10 @@ func (s *CertificateSigner) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	ad := kubetoken.ADRoleValidater{
 		Bind: func() (kubetoken.LDAPConn, error) {
 			ldapcreds := kubetoken.LDAPCreds{
-				Host:     s.Config.LDAP.Host,
-				Port:     s.Config.LDAP.Port,
-				BindDN:   s.Config.LDAP.BindDN,
-				Password: s.Config.LDAP.BindPassword,
+				Host:       s.Config.LDAP.Host,
+				Port:       s.Config.LDAP.Port,
+				BindDN:     s.Config.LDAP.BindDN,
+				Password:   s.Config.LDAP.BindPassword,
 				SkipVerify: s.Config.LDAP.SkipVerify,
 			}
 			return ldapcreds.Bind()
@@ -238,17 +236,19 @@ func (s *CertificateSigner) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	}
 
 	if err := ad.ValidateRoleForUser(
-					user,
-					role,
-					s.Config.LDAP.GroupSearchBaseDns,
-					s.Config.LDAP.GroupSearchFilter,
-		); err != nil {
+		user,
+		role,
+		s.Config.LDAP.GroupSearchBaseDns,
+		s.Config.LDAP.GroupSearchFilter,
+	); err != nil {
 		http.Error(w, err.Error(), 403)
 		return
 	}
 
 	customer, ns, environ, err := parseCustomerNamespaceEnvFromRole(role)
+
 	if err != nil {
+		log.Println(err)
 		http.Error(w, err.Error(), 404)
 		return
 	}
@@ -312,7 +312,7 @@ func (s *CertificateSigner) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 }
 
 type RoleHandler struct {
-		*Config
+	*Config
 }
 
 func (r *RoleHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -323,33 +323,33 @@ func (r *RoleHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	dn := userdn(
-		  r.Config.LDAP.Host,
-		  r.Config.LDAP.Port,
-		  getuserbinddn(user, r.Config.LDAP.SearchBase),
-		  pass,
-		  r.Config.LDAP.SearchBase,
-		  r.Config.LDAP.SearchFilter,
-		  user,
-		  r.Config.LDAP.SkipVerify,
-    )
+		r.Config.LDAP.Host,
+		r.Config.LDAP.Port,
+		getuserbinddn(user, r.Config.LDAP.SearchBase),
+		pass,
+		r.Config.LDAP.SearchBase,
+		r.Config.LDAP.SearchFilter,
+		user,
+		r.Config.LDAP.SkipVerify,
+	)
 	if dn != getuserbinddn(user, r.Config.LDAP.SearchBase) {
 		http.Error(w, "Forbidden", 403)
 		return
 	}
 	ad := &kubetoken.ADRoleProvider{
 		LDAPCreds: kubetoken.LDAPCreds{
-			Host:     r.Config.LDAP.Host,
-			Port:     r.Config.LDAP.Port,
+			Host: r.Config.LDAP.Host,
+			Port: r.Config.LDAP.Port,
 			//BindDN:   userdn(r.Config.LDAP.Host, r.Config.LDAP.Port, r.Config.LDAP.BindDN, r.Config.LDAP.BindPassword, r.Config.LDAP.SearchBase, r.Config.LDAP.SearchFilter, user, r.Config.LDAP.SkipVerify),
 			//Password: pass,
-			BindDN:   r.Config.LDAP.BindDN,
-			Password: r.Config.LDAP.BindPassword,
+			BindDN:     r.Config.LDAP.BindDN,
+			Password:   r.Config.LDAP.BindPassword,
 			SkipVerify: r.Config.LDAP.SkipVerify,
 		},
 	}
-	roles, err := ad.FetchRolesForUser(user, r.Config.LDAP.GroupSearchBaseDns, r.Config.LDAP.GroupSearchFilter )
+	roles, err := ad.FetchRolesForUser(user, r.Config.LDAP.GroupSearchBaseDns, r.Config.LDAP.GroupSearchFilter)
 	if err != nil {
-//		log.Println("no roles for user found")
+		//		log.Println("no roles for user found")
 		http.Error(w, err.Error(), 403)
 		return
 	}
@@ -384,6 +384,10 @@ func parseCustomerNamespaceEnvFromRole(role string) (string, string, string, err
 	//return "invia","default","kubetokend",nil
 
 	re, err := regexp.Compile(`^kube-(?P<customer>\w+)-(?P<ns>\w+)-(?P<env>\w+)`)
+	if strings.HasPrefix(role, "k8s") {
+		re, err = regexp.Compile(`^k8s_(?P<customer>[[:alnum:]-]+)_(?P<ns>[[:alnum:]-]+)_(?P<env>[[:alnum:]-]+)`)
+	}
+
 	if err != nil {
 		return "", "", "", err
 	}
