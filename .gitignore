@@ -1,0 +1,2 @@
+config/kubetoken.json
+internal/cert/_testdata/*
