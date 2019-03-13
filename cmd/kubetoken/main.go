@@ -336,6 +336,7 @@ func processCertificateResponse(kubeconfig string, result *kubetoken.Certificate
 }
 
 func compareVersionsAndExit(host string, certcheck bool) {
+	fmt.Println("Kubetoken Client Version %s", kubetoken.Version)
 	versionURL := host + "/version"
 	httpClientWithSelfSignedTLS := getTransport(certcheck)
 	client := &http.Client{Transport: httpClientWithSelfSignedTLS}
@@ -345,7 +346,6 @@ func compareVersionsAndExit(host string, certcheck bool) {
 		fatalf("unexpected status code fetching %s: %v", versionURL, resp.Status)
 	}
 	remoteVersion := readBodyAsString(resp.Body)
-	fmt.Println(kubetoken.Version)
 	if remoteVersion != kubetoken.Version {
 		fmt.Fprintf(os.Stderr, "Remote kubetoken version, %s, does not match local version, %s. Perhaps an upgrade is in order.\n", remoteVersion, kubetoken.Version)
 	}
