@@ -336,7 +336,7 @@ func processCertificateResponse(kubeconfig string, result *kubetoken.Certificate
 }
 
 func compareVersionsAndExit(host string, certcheck bool) {
-	fmt.Println("Kubetoken Client Version %s", kubetoken.Version)
+	fmt.Printf("Kubetoken Client Version %s", kubetoken.Version)
 	versionURL := host + "/version"
 	httpClientWithSelfSignedTLS := getTransport(certcheck)
 	client := &http.Client{Transport: httpClientWithSelfSignedTLS}
