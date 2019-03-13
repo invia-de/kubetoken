@@ -8,13 +8,16 @@
  
 
 ## Build
-run docker build . in Project directory
 
-This will build a Container which can be started with docker run \<container\> with kubetokend inside running on 8080
+run make build_container in Project directory
+
+This will build a Container which can be started with make start_container with kubetokend inside running on 48080
 
 Also, in this Container there is the Client kubetoken to connect to kubetokend
 
 Building with -f Dockerfile-debianbuild creates a debian:jessie Container with .deb Packages in the workdir. They can be copied with docker cp <container>:/<workdir>/*.deb /tmp
+
+Building with -f Dockerfile-buildFromGithub gets recent Version from github an build the binaries to the Container
 
 ## Installation
 
@@ -33,9 +36,7 @@ use kubetoken Client with
 ```--host```
  poiting to the kubetokend server
 
-the ```
-kubetoken --help
-``` Flag will Print Basic Usage.
+the ```kubetoken --help``` Flag will Print Basic Usage.
 
 kubetoken client will edit the ~/.kube/config with the proper Cluster Contexts for the chosen User
 
@@ -55,17 +56,19 @@ usage: kubetoken [<flags>]
 
 Flags:
       --help                  Show context-sensitive help (also try --help-long and --help-man).
-  -v, --verbose               talk, damnit
+  -v, --verbose               talk
   -j, --json                  dump json
-  -u, --user="$USER"    StaffID username.
-      --kubeconfig="$HOME/.kube/config"  
-                              kubeconfig location.
+  -u, --user="j.schueppel"    StaffID username. Default: $USER
+      --kubeconfig="/root/.kube/config"  
+                              kubeconfig location. Default: $HOME/.kube/config
       --version               print version string and exit.
   -f, --filter=FILTER         only show matching roles.
   -n, --namespace=NAMESPACE   override namespace.
-  -h, --host="$KUBETOKEN_SSO_AUTH_URL"               kubetokend hostname.
-  -P, --password="KUBETOKEN_PW"           password.
-  -k, --no-check-certificate  Skip Certificate Verify
+  -h, --host=""               kubetokend hostname. Default: $KUBETOKEN_SSO_AUTH_URL
+  -P, --password=""           password. Default: $KUBETOKEN_PW
+      --password-prompt       prompt for password (replaces current password in keyring)
+      --skip-keyring          skip usage of the keyring
+  -k, --no-check-certificate  Skip Certificate Verify Default: $KUBETOKEN_NO_CHECK_CERTIFICATE
 ```
 
 ### Contributing
