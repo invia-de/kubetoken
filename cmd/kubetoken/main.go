@@ -22,8 +22,6 @@ import (
 	"github.com/invia-de/kubetoken"
 	"github.com/invia-de/kubetoken/internal/cert"
 	"github.com/pkg/errors"
-
-	"github.com/howeyc/gopass"
 )
 
 // this value can be overwritten by -ldflags="-X main.kubetokend=$URL"
@@ -36,14 +34,16 @@ var (
 
 func main() {
 	var (
-		user       = kingpin.Flag("user", "StaffID username. Default: $USER").Short('u').Default(os.Getenv("USER")).String()
-		kubeconfig = kingpin.Flag("kubeconfig", "kubeconfig location. Default: $HOME/.kube/config").Default(filepath.Join(os.Getenv("HOME"), ".kube", "config")).String()
-		version    = kingpin.Flag("version", "print version string and exit.").Bool()
-		filter     = kingpin.Flag("filter", "only show matching roles.").Short('f').String()
-		namespace  = kingpin.Flag("namespace", "override namespace.").Short('n').String()
-		host       = kingpin.Flag("host", "kubetokend hostname. Default: $KUBETOKEN_SSO_AUTH_URL").Short('h').Default(os.Getenv("KUBETOKEN_SSO_AUTH_URL")).String()
-		pass       = kingpin.Flag("password", "password. Default: $KUBETOKEN_PW").Short('P').Default(os.Getenv("KUBETOKEN_PW")).String()
-		certcheck  = kingpin.Flag("no-check-certificate", "Skip Certificate Verify Default: $KUBETOKEN_NO_CHECK_CERTIFICATE").Short('k').Envar("KUBETOKEN_NO_CHECK_CERTIFICATE").Bool()
+		user        = kingpin.Flag("user", "StaffID username. Default: $USER").Short('u').Default(os.Getenv("USER")).String()
+		kubeconfig  = kingpin.Flag("kubeconfig", "kubeconfig location. Default: $HOME/.kube/config").Default(filepath.Join(os.Getenv("HOME"), ".kube", "config")).String()
+		version     = kingpin.Flag("version", "print version string and exit.").Bool()
+		filter      = kingpin.Flag("filter", "only show matching roles.").Short('f').String()
+		namespace   = kingpin.Flag("namespace", "override namespace.").Short('n').String()
+		host        = kingpin.Flag("host", "kubetokend hostname. Default: $KUBETOKEN_SSO_AUTH_URL").Short('h').Default(os.Getenv("KUBETOKEN_SSO_AUTH_URL")).String()
+		pass        = kingpin.Flag("password", "password. Default: $KUBETOKEN_PW").Short('P').Default(os.Getenv("KUBETOKEN_PW")).String()
+		passPrompt  = kingpin.Flag("password-prompt", "prompt for password (replaces current password in keyring)").Bool()
+		skipKeyring = kingpin.Flag("skip-keyring", "skip usage of the keyring").Bool()
+		certcheck   = kingpin.Flag("no-check-certificate", "Skip Certificate Verify Default: $KUBETOKEN_NO_CHECK_CERTIFICATE").Short('k').Envar("KUBETOKEN_NO_CHECK_CERTIFICATE").Bool()
 	)
 	kingpin.Parse()
 
@@ -53,10 +53,7 @@ func main() {
 	checkKubectlOrExit()
 
 	if *pass == "" {
-		fmt.Printf("Staff ID password for %s: ", *user)
-		pw, err := gopass.GetPasswd()
-		check(err)
-		*pass = string(pw)
+		*pass = getPassword(*user, *passPrompt, *skipKeyring)
 	}
 
 	// fetch available roles to check the staffid password

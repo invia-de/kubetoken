@@ -1,2 +1,7 @@
 config/kubetoken.json
 internal/cert/_testdata/*
+/vendor/
+/main
+/kubetoken
+/kubetokend
+/.idea/
