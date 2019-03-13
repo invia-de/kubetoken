@@ -19,8 +19,8 @@ import (
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/atlassian/kubetoken"
-	"github.com/atlassian/kubetoken/internal/cert"
+	"github.com/invia-de/kubetoken"
+	"github.com/invia-de/kubetoken/internal/cert"
 	"github.com/pkg/errors"
 
 	"github.com/howeyc/gopass"

@@ -1,6 +1,6 @@
 # kubetoken
 
-[![Build Status](https://travis-ci.org/atlassian/kubetoken.svg?branch=master)](https://travis-ci.org/atlassian/kubetoken)
+[![Build Status](https://travis-ci.org/invia-de/kubetoken.svg?branch=master)](https://travis-ci.org/atlassian/kubetoken)
 
 ## Synopsis
 

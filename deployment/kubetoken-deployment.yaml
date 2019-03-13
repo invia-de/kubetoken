@@ -11,7 +11,7 @@ spec:
         app: kubetoken
     spec:
       containers:
-      - image: atlassian/kubetoken:kubernetes
+      - image: invia-de/kubetoken:kubernetes
         imagePullPolicy: Always
         name: kubetoken
         ports:

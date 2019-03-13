@@ -5,7 +5,7 @@ start_container:
 		--rm \
 		-it \
 		-p 48080:48080 \
-                -v ${PWD}:/go/src/github.com/atlassian/kubetoken \
+                -v ${PWD}:/go/src/github.com/invia-de/kubetoken \
 		--name kubetoken \
 	${IMAGE}
 build_container:
@@ -14,7 +14,7 @@ run_container:
 	docker run \
                 --rm \
                 -it \
-                -v ${PWD}:/go/src/github.com/atlassian/kubetoken \
+                -v ${PWD}:/go/src/github.com/invia-de/kubetoken \
                 -p 48080:48080 \
                 --name kubetoken \
         ${IMAGE} \

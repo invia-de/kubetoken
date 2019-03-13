@@ -6,7 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 
-	"github.com/atlassian/kubetoken/internal/cert"
+	"github.com/invia-de/kubetoken/internal/cert"
 
 	ldap "gopkg.in/ldap.v2"
 //	"log"

@@ -20,7 +20,7 @@ import (
 	"strings"
 	//"strings"
 
-	"github.com/atlassian/kubetoken"
+	"github.com/invia-de/kubetoken"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	ldap "gopkg.in/ldap.v2"
 

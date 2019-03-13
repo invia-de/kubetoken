@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/atlassian/kubetoken"
+	"github.com/invia-de/kubetoken"
 )
 
 func TestLoadConfig(t *testing.T) {

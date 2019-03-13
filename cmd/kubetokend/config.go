@@ -6,7 +6,7 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"os"
-	"github.com/atlassian/kubetoken"
+	"github.com/invia-de/kubetoken"
 	"github.com/pkg/errors"
 )
 
