@@ -22,4 +22,4 @@ run_container:
 deps:
 	go get ./...
 build-kubetoken:
-	go build -ldflags="-X github.com/invia-de/kubetoken.Version=1.0.0 -o dist/kubetoken ./cmd/kubetoken
+	go build -ldflags="-X github.com/invia-de/kubetoken.Version=1.0.0" -o dist/kubetoken ./cmd/kubetoken
