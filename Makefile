@@ -19,3 +19,7 @@ run_container:
                 --name kubetoken \
         ${IMAGE} \
 	/bin/bash
+deps:
+	go get ./...
+build-kubetoken:
+	go build -o dist/kubetoken ./cmd/kubetoken
