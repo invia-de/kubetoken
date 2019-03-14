@@ -209,7 +209,7 @@ func chooseRole(roles []string) (string, error) {
 		cluster := strings.Replace(reverse(strings.Replace(reverse(clus[1]), clustersplitter, ".", 2)), clustersplitter, "-", -1)
 		//cluster := strings.Replace(clus[1], "_", ".", -1)
 
-		fmt.Printf("\t%d. Cluster: %-25s Namespace: %-20s Role: %s Rolename: %s\n", i+1, cluster, namespace, role, r)
+		fmt.Printf("\t%d. Cluster: %-25s Namespace: %-20s Role: %s Rolename: %-10s\n", i+1, cluster, namespace, role, r)
 	}
 	/*
 		for i, r := range roles {
