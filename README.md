@@ -15,7 +15,7 @@ This will build a Container which can be started with make start_container with 
 
 Also, in this Container there is the Client kubetoken to connect to kubetokend
 
-Building with -f Dockerfile-debianbuild creates a debian:jessie Container with .deb Packages in the workdir. They can be copied with docker cp <container>:/<workdir>/*.deb /tmp
+Building with -f Dockerfile-debianbuild creates a debian:stretch Container with .deb Packages in the workdir. They can be copied with docker cp \<container\>:/\<workdir\>/*.deb /tmp
 
 Building with -f Dockerfile-buildFromGithub gets recent Version from github an build the binaries to the Container
 

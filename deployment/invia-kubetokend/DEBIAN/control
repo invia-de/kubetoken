@@ -2,8 +2,9 @@ Source: invia-kubetokend
 Section: misc
 Priority: optional
 Essential: no
+Depends: adduser
 Maintainer: itops@invia.de
 Package: invia-kubetokend
-Version: 1.0.0
+Version: 1.0.0-3
 Architecture: all
 Description: Kubetoken Server Process

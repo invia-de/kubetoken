@@ -20,6 +20,11 @@ set -e
 
 case "$1" in
     configure)
+       addgroup --system --quiet kubetoken
+       adduser --system --quiet --ingroup kubetoken --no-create-home kubetoken
+       chown --no-dereference --recursive kubetoken:kubetoken /etc/kubetoken
+       install -g kubetoken -o kubetoken -m 600 /dev/null /var/log/kubetokend.log
+       chmod 700 /etc/kubetoken/ssl
        systemctl daemon-reload
        systemctl enable kubetokend.service
     ;;

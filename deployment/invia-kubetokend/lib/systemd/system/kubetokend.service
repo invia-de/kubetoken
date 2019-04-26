@@ -5,6 +5,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=/usr/bin/kubetokend --config /etc/kubetoken/kubetoken.json
+User=kubetoken
 Restart=on-failure
 
 [Install]
